@@ -1,0 +1,8 @@
+Written by Alperen Degirmenci
+9/11/2016
+
+This is a backup of the QHull library, compiled using Qt Creator. Win32 Release.
+QHull.cpp/h were edited to have additional functions to enable easier use of QHull with vectors and float3 data types.
+The static_r and cpp libraries are used in the Reconstruction GUI. The Qt version of the GUI was having linking issues
+due to userfrintf being Defined in multiple libraries. Alleviated the problem by not including the printf.c file in the
+static_r library.
