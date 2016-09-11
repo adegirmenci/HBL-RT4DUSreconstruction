@@ -577,7 +577,9 @@ bool Volume3D::saveVolumeToDisk()
 
 bool Volume3D::saveVolumeToDisk(std::string fname)
 {
-	FILE *fp = fopen(fname.c_str(), "w");
+    // Open as ***BINARY*** file for output
+    // It took about 15 hours of debugging to realize the 'b' was missing ...
+    FILE *fp = fopen(fname.c_str(), "wb");
 
 	if(!fp)
 	{
@@ -585,61 +587,56 @@ bool Volume3D::saveVolumeToDisk(std::string fname)
 		return false;
 	}
 
-	// convert to char
-	std::vector<uchar> temp;
-	temp.resize(m_volume.size());
-	//for (size_t i = 0; i < temp.size(); i++)
-	//{
-	//	if (m_volume[i] < 0)
-	//		m_volume[i] = 0;
-	//	else if (m_volume[i] > 255)
-	//		m_volume[i] = 255;
-	//	temp[i] = (uchar)m_volume[i];
-	//}
+    // convert to char
+    std::vector<uchar> temp;
+    temp.resize(m_volume.size());
+    for (size_t i = 0; i < temp.size(); i++)
+    {
+        if (m_volume[i] < 0)
+            m_volume[i] = 0;
+        else if (m_volume[i] > 255)
+            m_volume[i] = 255;
+        temp[i] = (uchar)m_volume[i];
+    }
 
-	int dims[3] = { m_gridDimensions.height, m_gridDimensions.width, m_gridDimensions.depth };
-	cv::Mat m = cv::Mat(3, dims, CV_8UC1);
+    //size_t idx = 0;
+    //for (size_t k = 0; k < m_gridDimensions.depth; k++)
+    //{
+    //	for (size_t i = 0; i < m_gridDimensions.width; i++)
+    //	{
+    //		for (size_t j = 0; j < m_gridDimensions.height; j++)
+    //		{
+    //			size_t linidx = k*m_gridDimensions.height*m_gridDimensions.width + j*m_gridDimensions.width + i;
+    //			//size_t linidx = k*m_gridDimensions.height*m_gridDimensions.width + j*m_gridDimensions.height + i;
+    //			//size_t linidx = k*m_gridDimensions.height*m_gridDimensions.width + i*m_gridDimensions.height + j;
+    //			int pixVal = m_volume[linidx];
+    //			if (pixVal < 0)
+    //			{	pixVal = 0;     }
+    //			else if (pixVal > 255)
+    //			{   pixVal = 255;	}
+    //			temp[idx] = (uchar)pixVal;
+    //			idx++;
+    //		}
+    //	}
+    //}
 
-	size_t idx = 0;
-	for (size_t k = 0; k < m_gridDimensions.depth; k++)
-	{
-		for (size_t i = 0; i < m_gridDimensions.width; i++)
-		{
-			for (size_t j = 0; j < m_gridDimensions.height; j++)
-			{
-				size_t linidx = k*m_gridDimensions.height*m_gridDimensions.width + j*m_gridDimensions.width + i;
-				//size_t linidx = k*m_gridDimensions.height*m_gridDimensions.width + j*m_gridDimensions.height + i;
-				//size_t linidx = k*m_gridDimensions.height*m_gridDimensions.width + i*m_gridDimensions.height + j;
-				int pixVal = m_volume[linidx];
-				if (pixVal < 0)
-				{	pixVal = 0;     }
-				else if (pixVal > 255)
-				{   pixVal = 255;	}
-				unsigned char &c = m.at<unsigned char>(j,i,k);
-				c = (uchar)pixVal;
-				temp[idx] = (uchar)pixVal;
-				idx++;
-			}
-		}
-	}
-
-	//for (size_t i = 0; i < m_volume.size(); i++)
-	//{
-	//	size_t d = i / (m_gridDimensions.width* m_gridDimensions.height);
-	//	size_t h = (i - d*m_gridDimensions.width* m_gridDimensions.height) / m_gridDimensions.height;
-	//	size_t w = i - d*m_gridDimensions.width* m_gridDimensions.height - h*m_gridDimensions.height;
-	//	int pixVal = m_volume[i];
-	//	if (pixVal < 0)
-	//	{
-	//		pixVal = 0;
-	//		//pixVal = ((d + h + w) * 255) / (m_gridDimensions.width + m_gridDimensions.height + m_gridDimensions.depth);
-	//	}
-	//	else if (pixVal > 255)
-	//	{
-	//		pixVal = 255;
-	//	}
-	//	temp[d*m_gridDimensions.width* m_gridDimensions.height + h*m_gridDimensions.width + w] = (uchar)pixVal;
-	//}
+    //for (size_t i = 0; i < m_volume.size(); i++)
+    //{
+    //	size_t d = i / (m_gridDimensions.width* m_gridDimensions.height);
+    //	size_t h = (i - d*m_gridDimensions.width* m_gridDimensions.height) / m_gridDimensions.height;
+    //	size_t w = i - d*m_gridDimensions.width* m_gridDimensions.height - h*m_gridDimensions.height;
+    //	int pixVal = m_volume[i];
+    //	if (pixVal < 0)
+    //	{
+    //		pixVal = 0;
+    //		//pixVal = ((d + h + w) * 255) / (m_gridDimensions.width + m_gridDimensions.height + m_gridDimensions.depth);
+    //	}
+    //	else if (pixVal > 255)
+    //	{
+    //		pixVal = 255;
+    //	}
+    //	temp[d*m_gridDimensions.width* m_gridDimensions.height + h*m_gridDimensions.width + w] = (uchar)pixVal;
+    //}
 
 	// write as char
 	//size_t written = fwrite((void *)temp.data(), sizeof(std::vector<uchar>::value_type), temp.size(), fp);
