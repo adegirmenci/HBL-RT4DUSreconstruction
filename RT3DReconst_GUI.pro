@@ -19,16 +19,21 @@ SOURCES += main.cpp\
     frameserverthread.cpp \
     frameserverwidget.cpp \
     rt3dreconstworker.cpp \
-    Volume3D.cpp
+    Volume3D.cpp \
+    volumeclientwidget.cpp
 
 HEADERS  += rt3dreconst_gui.h \
     frameserverthread.h \
     frameserverwidget.h \
     rt3dreconstworker.h \
-    Volume3D.h
+    Volume3D.h \
+    volumeclientwidget.h
 
 FORMS    += rt3dreconst_gui.ui \
-    frameserverwidget.ui
+    frameserverwidget.ui \
+    volumeclientwidget.ui
+
+RC_FILE = RT3DUSReconstGUI.rc
 
 win32 {
     INCLUDEPATH += "C:\\opencv\\build\\include" \

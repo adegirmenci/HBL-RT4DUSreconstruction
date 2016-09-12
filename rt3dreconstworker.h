@@ -34,6 +34,7 @@ public:
 signals:
     void statusChanged(int event);
     void finished(); // emit upon termination
+    void volumeSaved(QString vol);
 
 public slots:
     void setEpoch(const QDateTime &datetime); // set Epoch
@@ -41,6 +42,8 @@ public slots:
     void addFrame(FrameExtd frm);
     void loadMask(QString &path, cv::Mat &mask, cv::Rect &roi);
     void interpolate();
+    void tellVolumeToSave();
+    void passthroughVolumeSaved(QString vol);
 
 private:
     // Instead of using "m_mutex.lock()"

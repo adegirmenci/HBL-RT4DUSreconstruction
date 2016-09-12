@@ -36,6 +36,9 @@ void RT3DReconstWorker::initializeWorker()
 
     m_isReady = true;
 
+    connect(m_volume, SIGNAL(volumeSaved(QString)),
+            this, SLOT(passthroughVolumeSaved(QString)));
+
     printf("RT3DReconstWorker initialized.\n");
 }
 
@@ -46,7 +49,7 @@ void RT3DReconstWorker::addFrame(FrameExtd frm)
     loadMask(frm.mask_, newFrame.mask_, roi);
     printf("ROI: %d x %d\n", roi.width, roi.height);
 
-    newFrame.image_ = cv::imread(frm.image_.toStdString(), CV_LOAD_IMAGE_GRAYSCALE );
+    newFrame.image_ = cv::imread((frm.image_+tr(".jp2")).toStdString(), CV_LOAD_IMAGE_GRAYSCALE );
     printf("Frame read: %d x %d\n", newFrame.image_.cols, newFrame.image_.rows);
 
     //cvSetImageROI(newFrame.image_, roi);
@@ -139,10 +142,22 @@ void RT3DReconstWorker::interpolate()
     m_volume->discretizePoints_gpu(std::vector<int>());
     m_volume->addObsToVolume_gpu(std::vector<int>());
     //m_volume->computeConvHull();
-    //m_volume->fillConvHull();
+    //m_volume->fillConvHull(); // TODO: speedup
+    //TODO: interpolate
     m_volume->xferDeviceToHost();
 
-    m_volume->saveVolumeToDisk();
+    //m_volume->saveVolumeToDisk();
+}
+
+void RT3DReconstWorker::tellVolumeToSave()
+{
+    if(m_volume)
+        m_volume->saveVolumeToDisk();
+}
+
+void RT3DReconstWorker::passthroughVolumeSaved(QString vol)
+{
+    emit volumeSaved(vol);
 }
 
 void RT3DReconstWorker::setEpoch(const QDateTime &datetime)

@@ -14,9 +14,13 @@ RT3DReconst_GUI::RT3DReconst_GUI(QWidget *parent) :
     m_thread.start();
 
     connect(m_worker, SIGNAL(statusChanged(int)), this, SLOT(workerStatusChanged(int)));
+    connect(m_worker, SIGNAL(volumeSaved(QString)),
+            ui->volumeClientWidget, SLOT(sendVolume(QString)));
 
     connect(ui->frameServerWidget->m_worker, SIGNAL(newFrameReceived(FrameExtd)),
             m_worker, SLOT(addFrame(FrameExtd)));
+    connect(ui->volumeClientWidget, SIGNAL(tellVolumeToSave()),
+            m_worker, SLOT(tellVolumeToSave()));
 
     m_worker->initializeWorker();
 }

@@ -55,6 +55,14 @@ Volume3D::~Volume3D()
 		cudaFree(dev_volume);
 
 	ms_nVolumes--;
+
+    if(ms_nVolumes == 0)
+    {
+        m_cudaStatus = cudaDeviceReset();
+        if (m_cudaStatus != cudaSuccess) {
+            fprintf(stderr, "cudaDeviceReset failed!");
+        }
+    }
 }
 
 bool Volume3D::addFrame(const Frame &frm)
@@ -567,23 +575,20 @@ bool Volume3D::xferDeviceToHost()
 
 bool Volume3D::saveVolumeToDisk()
 {
-	auto now = std::chrono::system_clock::now();
-	auto in_time_t = std::chrono::system_clock::to_time_t(now);
-	std::stringstream ss;
-	ss << std::put_time(std::localtime(&in_time_t), "%Y%m%d_%H%M%S") << "_vol_1.raw";
+    QString fname = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmsszzz");
 
-	return saveVolumeToDisk(ss.str());
+    return saveVolumeToDisk(fname);
 }
 
-bool Volume3D::saveVolumeToDisk(std::string fname)
+bool Volume3D::saveVolumeToDisk(QString fname)
 {
     // Open as ***BINARY*** file for output
     // It took about 15 hours of debugging to realize the 'b' was missing ...
-    FILE *fp = fopen(fname.c_str(), "wb");
+    FILE *fp = fopen((fname + tr("_vol_1.raw")).toStdString().c_str(), "wb");
 
 	if(!fp)
 	{
-		fprintf(stderr, "Error opening file '%s'\n", fname.c_str());
+        fprintf(stderr, "Error opening file '%s'\n", fname.toStdString().c_str());
 		return false;
 	}
 
@@ -647,7 +652,35 @@ bool Volume3D::saveVolumeToDisk(std::string fname)
 
 	fclose(fp);
 
-	printf("Written '%s', %d bytes\n", fname.c_str(), written);
+    qDebug() << tr("Written %1, %2 bytes.").arg(fname + tr("_vol_1.raw")).arg(written);
+
+    // save volume dimensions to txt file
+    QFile txtfile(fname + tr("_vol_1.txt"));
+    if (txtfile.open(QFile::WriteOnly)) {
+        QTextStream txtout(&txtfile);
+        txtout << tr("%1\t%2\t%3\n")
+                  .arg(m_gridDimensions.width)
+                  .arg(m_gridDimensions.height)
+                  .arg(m_gridDimensions.depth);
+        txtout << "W\tH\tD\n\n";
+        txtout << tr("Number of frames: %1\n")
+                  .arg(m_nFrames);
+        txtout << tr("Grid Resolution:\n%1\t%2\t%3\n")
+                  .arg(m_gridResolution.x)
+                  .arg(m_gridResolution.y)
+                  .arg(m_gridResolution.z);
+        txtout << tr("Bounding Box:\n%1\t%2\n%3\t%4\n%5\t%6\n")
+                  .arg(m_boundingBoxMin.x).arg(m_boundingBoxMax.x)
+                  .arg(m_boundingBoxMin.y).arg(m_boundingBoxMax.y)
+                  .arg(m_boundingBoxMin.z).arg(m_boundingBoxMax.z);
+    }
+    txtfile.close();
+
+    QString pathToVolume = QDir::currentPath() + tr("/") + fname;
+
+    qDebug() << pathToVolume;
+
+    emit volumeSaved(pathToVolume);
 
 	return true;
 }
@@ -658,4 +691,6 @@ void Volume3D::handleCUDAerror()
 	cudaFree(dev_discretizedObservations);
 	cudaFree(dev_obsIndices);
 	cudaFree(dev_volume);
+
+    exit(123);
 }

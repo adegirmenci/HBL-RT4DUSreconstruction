@@ -2,6 +2,10 @@
 #define HBL_VOLUME3D_H
 
 #include <QObject>
+#include <QString>
+#include <QDateTime>
+#include <QDir>
+#include <QDebug>
 
 #include <vector>
 #include <chrono>
@@ -137,12 +141,13 @@ public:
 	bool fillConvHull();
 	bool xferDeviceToHost();
 	bool saveVolumeToDisk();
-	bool saveVolumeToDisk(std::string fname);
+    bool saveVolumeToDisk(QString fname);
 
 	const int getVolumeNumber() { return m_volumeID; }
 
 signals:
     void logEvent(int eventID);
+    void volumeSaved(QString vol);
 
 private:
 	size_t m_nFrames; // number of 2D frames contained in this 3D volume
