@@ -51,6 +51,9 @@ cudaError_t discretizePoints(const float4 *dev_points, float4 *dev_discPoints, i
 extern "C"
 cudaError_t addObsToVolume(const int4 * dev_pointIdx, int * dev_volume, const int nPoints, const cudaExtent gridDims);
 
+extern "C"
+cudaError_t interpolateVolume(int * dev_volume, const cudaExtent gridDims);
+
 static int next_power_of_two(float a_F){
 	if (a_F < 0.0f)
 	{
@@ -141,6 +144,7 @@ public:
 	bool addObsToVolume_gpu(const std::vector<int> &idx);
 	bool computeConvHull();
 	bool fillConvHull();
+    bool interpolate();
 	bool xferDeviceToHost();
 	bool saveVolumeToDisk();
     bool saveVolumeToDisk(QString fname);

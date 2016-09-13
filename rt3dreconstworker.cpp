@@ -141,9 +141,9 @@ void RT3DReconstWorker::interpolate()
     m_volume->xferHostToDevice();
     m_volume->discretizePoints_gpu(std::vector<int>());
     m_volume->addObsToVolume_gpu(std::vector<int>());
-    //m_volume->computeConvHull();
-    //m_volume->fillConvHull(); // TODO: speedup
-    //TODO: interpolate
+//    m_volume->computeConvHull();
+//    m_volume->fillConvHull(); // TODO: speedup
+//    m_volume->interpolate();
     m_volume->xferDeviceToHost();
 
     //m_volume->saveVolumeToDisk();

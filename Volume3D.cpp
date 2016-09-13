@@ -24,12 +24,12 @@ Volume3D::Volume3D(QObject *parent) : QObject(parent), m_nFrames(0)
 	m_boundingBoxMax.z = -std::numeric_limits<float>::infinity();
 
 	// default resolution
-//	m_gridResolution.x = 1.0f;
-//	m_gridResolution.y = 1.0f;
-//	m_gridResolution.z = 1.0f;
-    m_gridResolution.x = 0.75f;
-    m_gridResolution.y = 0.75f;
-    m_gridResolution.z = 0.75f;
+    m_gridResolution.x = 1.0f;
+    m_gridResolution.y = 1.0f;
+    m_gridResolution.z = 1.0f;
+//    m_gridResolution.x = 0.75f;
+//    m_gridResolution.y = 0.75f;
+//    m_gridResolution.z = 0.75f;
 
 	// check if there is a high_resolution_clock and a steady_clock
 	std::cout << "high_resolution_clock" << std::endl;
@@ -91,10 +91,30 @@ void Volume3D::transformPlane(const int idx)
     //    double* tmp1 = mat_mult4x4(tmp, m_STm_BT); //the right side
     //    mat_mult4x4(tmp1, m_BT_CT, m_BB_CT_curTipPos); //convert to CT in terms of BB
 
-	double usPlaneLength = 76.6 - 3.9;
+//	double usPlaneLength = 76.6 - 3.9;
+    double usPlaneLength = 102.6 - 3.9;
 
 	int nRows = m_frames[idx].image_.rows;
 	double pixSize = usPlaneLength / static_cast<double>(nRows); // assuming square pixels
+
+//    cv::Matx44d T_EM_ST;
+//    T_EM_ST <<  0,  0, 1, 0,
+//                0, -1, 0, 0,
+//                1,  0, 0, 0,
+//                0,  0, 0, 1;
+//    std::cout << "T_Box_EM\n" << T_EM_ST << std::endl;
+
+    cv::Matx44d T_EM_ST;
+    T_EM_ST <<  0,  0,  -1, 0,
+                0,  1,  0, 0,
+                1,  0,  0, 0,
+                0,  0,  0, 1;
+
+    cv::Matx44d T_Box_EM;
+    T_Box_EM << 0,  0,  1, 0,
+                0,  -1,  0, 0,
+                1,  0,  0, 0,
+                0,  0,  0, 1;
 
     if(m_nFrames == 1)
     {
@@ -125,7 +145,7 @@ void Volume3D::transformPlane(const int idx)
 
         // set the first frame location as the origin
         // transform coordinates such that z aligns with catheter
-        m_origin = cv::Matx44d( m_frames[idx].emData_.val );
+        m_origin = m_frames[idx].emData_*T_Box_EM;
 
         //m_originInv = cv::Matx44d( m_origin.val );
 
@@ -147,25 +167,6 @@ void Volume3D::transformPlane(const int idx)
 
         m_BB_Box = m_BB_SBm * m_originInv;
     }
-
-//    cv::Matx44d T_EM_ST;
-//    T_EM_ST <<  0,  0, 1, 0,
-//                0, -1, 0, 0,
-//                1,  0, 0, 0,
-//                0,  0, 0, 1;
-//    std::cout << "T_Box_EM\n" << T_EM_ST << std::endl;
-
-    cv::Matx44d T_EM_ST;
-    T_EM_ST <<  0,  0,  -1, 0,
-                0,  1,  0, 0,
-               1,  0,  0, 0,
-                0,  0,  0, 1;
-
-    cv::Matx44d T_Box_EM;
-    T_Box_EM << 0,  0, -1, 0,
-                0,  1,  0, 0,
-                1,  0,  0, 0,
-                0,  0,  0, 1;
 
     cv::Matx44d T_EM_CT;
     T_EM_CT << 1, 0, 0, 0,
@@ -189,7 +190,8 @@ void Volume3D::transformPlane(const int idx)
     //cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_Box_EM * T_EM_CT * T_CT_IMG;
     //cv::Matx44d premul = m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG; // T_EM_ST * T_Box_EM *T_EM_CT * T_CT_IMG
     //cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG;
-    cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG;
+    cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_Box_EM * T_EM_CT * T_CT_IMG;
+    // cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG; // somewhat working
     //cv::Matx44d premul = m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG;
     //std::cout << "premul\n" << premul << std::endl;
 
@@ -573,30 +575,30 @@ bool Volume3D::fillConvHull()
 	QhullPoint currPoint = qhull.origin(); // using origin as a dummy point to initialize
 	//std::vector<int> isInside(qhull.facetCount(), 0);
 	std::vector<QhullFacet> hullFacets = qhull.facetList().toStdVector();
-	size_t linIdx = 0;
+    size_t linIdx = 0;
 	for (size_t k = 0; k < m_gridDimensions.depth; k++)
 	{
-		printf(".");
-		for (size_t j = 0; j < m_gridDimensions.height; j++)
+        printf(".");
+        for (size_t j = 0; j < m_gridDimensions.height; j++)
 		{
-			for (size_t i = 0; i < m_gridDimensions.width; i++)
+            for (size_t i = 0; i < m_gridDimensions.width; i++)
 			{
-				currPoint[0] = i; currPoint[1] = j; currPoint[2] = k;
+                currPoint[0] = (float)i; currPoint[1] = (float)j; currPoint[2] = (float)k;
 
-				pointT *point = currPoint.getBaseT();
-				realT dist;
-				int sum = 0;
-				for each (QhullFacet facet in hullFacets)
+                pointT *point = currPoint.getBaseT();
+                realT dist;
+                int sum = 0;
+                for (const auto &facet : hullFacets) //QhullFacet
 				{
 					qh_distplane(qhull.qh(), point, facet.getBaseT() , &dist);
 					if (dist < (qhull.qh()->min_vertex - 2 * qhull.qh()->DISTround))
 					{
-						//isInside[idx] = 1;
+                        //isInside
 						sum++;
 					}
 				}
 				if (sum != qhull.facetCount()) // point is outside hull
-					m_volume[linIdx] = 0; //set to zero to establish the interpolation boundary	
+                    m_volume[linIdx] = -2; //set to -2 to establish the interpolation boundary
 
 				linIdx++;
 			}
@@ -614,7 +616,22 @@ bool Volume3D::fillConvHull()
 		return false;
 	}
 
-	return true;
+    return true;
+}
+
+bool Volume3D::interpolate()
+{
+    // call kernel
+    printf("CUDA kernel exec: interpolateVolume().\n");
+    m_cudaStatus = interpolateVolume(dev_volume, m_gridDimensions);
+    // Check for any errors launching the kernel
+    if (m_cudaStatus != cudaSuccess) {
+        fprintf(stderr, "interpolateVolume launch failed: %s\n", cudaGetErrorString(m_cudaStatus));
+        handleCUDAerror();
+        return false;
+    }
+
+    return true;
 }
 
 bool Volume3D::xferDeviceToHost()
