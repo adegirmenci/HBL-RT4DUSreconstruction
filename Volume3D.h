@@ -6,6 +6,8 @@
 #include <QDateTime>
 #include <QDir>
 #include <QDebug>
+#include <QQuaternion>
+#include <QMatrix4x4>
 
 #include <vector>
 #include <chrono>
@@ -168,6 +170,10 @@ private:
 	static int ms_nVolumes; //counter to keep track of number of volumes
 
 	void transformPlane(const int idx);
+    cv::Matx44d m_origin;
+    cv::Matx44d m_originInv;
+    cv::Matx44d m_BB_Box;
+    cv::Matx44d m_STm_BT;
 
 	// QHull
 	Qhull qhull;

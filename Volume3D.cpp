@@ -24,9 +24,12 @@ Volume3D::Volume3D(QObject *parent) : QObject(parent), m_nFrames(0)
 	m_boundingBoxMax.z = -std::numeric_limits<float>::infinity();
 
 	// default resolution
-	m_gridResolution.x = 1.0f;
-	m_gridResolution.y = 1.0f;
-	m_gridResolution.z = 1.0f;
+//	m_gridResolution.x = 1.0f;
+//	m_gridResolution.y = 1.0f;
+//	m_gridResolution.z = 1.0f;
+    m_gridResolution.x = 0.75f;
+    m_gridResolution.y = 0.75f;
+    m_gridResolution.z = 0.75f;
 
 	// check if there is a high_resolution_clock and a steady_clock
 	std::cout << "high_resolution_clock" << std::endl;
@@ -79,13 +82,102 @@ void Volume3D::transformPlane(const int idx)
 {
 	printf("Transforming Plane %d...\n", idx+1);
 
+    // flip image LR - no need
+    //cv::flip(m_frames[idx].image_,m_frames[idx].image_,1);
+
+    // From old ICEbot GUI
+    //    create4x4Matrix(m_curTipPos, m_latest_em_pos);
+    //    double* tmp = mat_mult4x4(m_BB_Box, m_curTipPos); //the left side of the constants
+    //    double* tmp1 = mat_mult4x4(tmp, m_STm_BT); //the right side
+    //    mat_mult4x4(tmp1, m_BT_CT, m_BB_CT_curTipPos); //convert to CT in terms of BB
+
 	double usPlaneLength = 76.6 - 3.9;
 
 	int nRows = m_frames[idx].image_.rows;
 	double pixSize = usPlaneLength / static_cast<double>(nRows); // assuming square pixels
 
+    if(m_nFrames == 1)
+    {
+        QQuaternion calib(0.0098, -0.0530, -0.9873, -0.1492);
+        QMatrix3x3 calibMat = calib.toRotationMatrix();
+
+        cv::Matx44d m_BB_SBm = cv::Matx44d(calibMat(0,0),calibMat(0,1),calibMat(0,2), 0,
+                                           calibMat(1,0),calibMat(1,1),calibMat(1,2), 0,
+                                           calibMat(2,0),calibMat(2,1),calibMat(2,2), 0,
+                                                       0,            0,            0, 1);
+        QQuaternion calibInv = calib.inverted();
+        QMatrix3x3 calibMatInv = calibInv.toRotationMatrix();
+        m_STm_BT = cv::Matx44d( calibMatInv(0,0),calibMatInv(0,1),calibMatInv(0,2), 0,
+                                calibMatInv(1,0),calibMatInv(1,1),calibMatInv(1,2), 0,
+                                calibMatInv(2,0),calibMatInv(2,1),calibMatInv(2,2), 0,
+                                               0,            0,            0,       1);
+
+
+//        cv::Matx44d m_BB_SBm = cv::Matx44d( 0.1017,  0.9499, 0.2957, 0.0000,
+//                                           -0.0352, -0.2936, 0.9553, 0.0023,
+//                                            0.9942, -0.1076, 0.0035, 0.0000,
+//                                                 0,       0,      0, 1.0000);
+
+//        m_STm_BT = cv::Matx44d( 0.1017, -0.0352,  0.9942,  0.0001,
+//                                0.9499, -0.2936, -0.1076,  0.0007,
+//                                0.2957,  0.9553,  0.0035, -0.0022,
+//                                     0,       0,       0,  1.0000);
+
+        // set the first frame location as the origin
+        // transform coordinates such that z aligns with catheter
+        m_origin = cv::Matx44d( m_frames[idx].emData_.val );
+
+        //m_originInv = cv::Matx44d( m_origin.val );
+
+        cv::Matx33d rot = m_origin.get_minor<3,3>(0,0);
+        cv::Matx33d rotTr = rot.t();
+        cv::Matx31d trans = -rotTr * m_origin.get_minor<3,1>(0,3);
+
+        m_originInv = cv::Matx44d(rotTr(0),rotTr(1),rotTr(2),trans(0),
+                                  rotTr(3),rotTr(4),rotTr(5),trans(1),
+                                  rotTr(6),rotTr(7),rotTr(8),trans(2),
+                                  0,0,0,1);
+
+
+        std::cout << "\nm_origin\n" << m_origin << std::endl;
+
+        std::cout << "\nm_originInv\n" << m_originInv << std::endl;
+
+        std::cout << "\nMult\n" << m_originInv*m_origin << std::endl;
+
+        m_BB_Box = m_BB_SBm * m_originInv;
+    }
+
+//    cv::Matx44d T_EM_ST;
+//    T_EM_ST <<  0,  0, 1, 0,
+//                0, -1, 0, 0,
+//                1,  0, 0, 0,
+//                0,  0, 0, 1;
+//    std::cout << "T_Box_EM\n" << T_EM_ST << std::endl;
+
+    cv::Matx44d T_EM_ST;
+    T_EM_ST <<  0,  0,  -1, 0,
+                0,  1,  0, 0,
+               1,  0,  0, 0,
+                0,  0,  0, 1;
+
+    cv::Matx44d T_Box_EM;
+    T_Box_EM << 0,  0, -1, 0,
+                0,  1,  0, 0,
+                1,  0,  0, 0,
+                0,  0,  0, 1;
+
+    cv::Matx44d T_EM_CT;
+    T_EM_CT << 1, 0, 0, 0,
+               0, 1, 0, 0,
+               0, 0, 1, 14.5,
+               0, 0, 0, 1;
+
 	cv::Matx44d T_CT_IMG;
-	T_CT_IMG << 0, 1, 0, 0, 0, 0, -1, 0, -1, 0, 0, m_frames[idx].image_.cols / 2.0 * pixSize, 0, 0, 0, 1;
+    T_CT_IMG << 0, 1, 0, 0,
+                0, 0, -1, 0,
+               -1, 0, 0, m_frames[idx].image_.cols / 2.0 * pixSize,
+                0, 0, 0, 1;
 	std::cout << "T_CT_IMG\n" << T_CT_IMG << std::endl;
 	printf("Pixel size: %.3f\n", pixSize);
 
@@ -93,7 +185,13 @@ void Volume3D::transformPlane(const int idx)
 	obsIdxAndLength.x = m_observations.size();
 	obsIdxAndLength.y = 0;
 
-	cv::Matx44d premul = m_frames[idx].emData_ * T_CT_IMG;
+    //cv::Matx44d premul = m_BB_Box *  m_frames[idx].emData_ * m_STm_BT * T_EM_CT * T_CT_IMG;
+    //cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_Box_EM * T_EM_CT * T_CT_IMG;
+    //cv::Matx44d premul = m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG; // T_EM_ST * T_Box_EM *T_EM_CT * T_CT_IMG
+    //cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG;
+    cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG;
+    //cv::Matx44d premul = m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG;
+    //std::cout << "premul\n" << premul << std::endl;
 
 	//// debug print
 	//std::cout << "T_CT_IMG\n" << T_CT_IMG << std::endl;
@@ -290,7 +388,7 @@ bool Volume3D::xferHostToDevice()
 {
 	// Choose which GPU to run on, change this on a multi-GPU system.
 	printf("Set CUDA Device to 0.\n");
-	m_cudaStatus = cudaSetDevice(0);
+    m_cudaStatus = cudaSetDevice(1);
 	if (m_cudaStatus != cudaSuccess) {
 		fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
 		handleCUDAerror();
