@@ -8,6 +8,7 @@
 #include <QDebug>
 #include <QQuaternion>
 #include <QMatrix4x4>
+#include <QtMath>
 
 #include <vector>
 #include <chrono>
@@ -151,6 +152,9 @@ public:
 
 	const int getVolumeNumber() { return m_volumeID; }
 
+public slots:
+    void update_CT_US(float angle);
+
 signals:
     void logEvent(int eventID);
     void volumeSaved(QString vol);
@@ -174,10 +178,15 @@ private:
 	static int ms_nVolumes; //counter to keep track of number of volumes
 
 	void transformPlane(const int idx);
-    cv::Matx44d m_origin;
-    cv::Matx44d m_originInv;
-    cv::Matx44d m_BB_Box;
-    cv::Matx44d m_STm_BT;
+//    cv::Matx44d m_origin;
+//    cv::Matx44d m_originInv;
+//    cv::Matx44d m_BB_Box;
+//    cv::Matx44d m_STm_BT;
+
+
+    cv::Matx44d m_resetBB, m_resetBBinv, m_EM_now, m_EM_Box_meas, m_EM_Box_measInv, m_EM_Box_ideal,m_EMideal_CT, m_CT_US;
+    cv::Matx44d m_T_CT_IMG;
+
 
 	// QHull
 	Qhull qhull;

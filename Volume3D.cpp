@@ -42,8 +42,41 @@ Volume3D::Volume3D(QObject *parent) : QObject(parent), m_nFrames(0)
 	std::cout << std::chrono::steady_clock::period::den << std::endl;
 	std::cout << "steady = " << std::boolalpha << std::chrono::steady_clock::is_steady << std::endl << std::endl;
 
+    // calibration
+
+//    QQuaternion calib(0.0098, -0.0530, -0.9873, -0.1492);
+//    QMatrix3x3 calibMat = calib.toRotationMatrix();
+
+    //m_resetBB, m_resetBBinv, m_EM_now, m_EM_Box_meas, m_EM_Box_measInv, m_EM_Box_ideal,m_EMideal_CT, m_CT_US
+    m_EM_Box_meas = cv::Matx44d(-0.9617, 0.2197,  0.1611, 0.0,
+                                 0.2387, 0.9648,  0.1100, 0.0,
+                                -0.1313, 0.1443, -0.9803, 0.0,
+                                    0.0,    0.0,     0.0, 1.0);
+    m_EM_Box_measInv = m_EM_Box_meas.inv();
+    m_EM_Box_ideal = cv::Matx44d(-1.0, 0.0,  0.0, 0.0,
+                                  0.0, 1.0,  0.0, 0.0,
+                                  0.0, 0.0, -1.0, 0.0,
+                                  0.0, 0.0,  0.0, 1.0);
+    m_EMideal_CT = cv::Matx44d(0.0, 0.0, 1.0, 14.5,
+                               0.0, 1.0, 0.0,  0.0,
+                              -1.0, 0.0, 0.0, -2.3,
+                               0.0, 0.0, 0.0,  1.0);
+
+    // update_CT_US(20.0f);
+    update_CT_US(0.0f);
+
 }
 
+void Volume3D::update_CT_US(float angle)
+{
+    float c = cos(qDegreesToRadians(angle));
+    float s = sin(qDegreesToRadians(angle));
+
+    m_CT_US = cv::Matx44d( c,   -s, 0.0, 0.0,
+                           s,    c, 0.0, 0.0,
+                          0.0, 0.0, 1.0, 0.0,
+                          0.0, 0.0, 0.0, 1.0);
+}
 
 Volume3D::~Volume3D()
 {
@@ -91,113 +124,57 @@ void Volume3D::transformPlane(const int idx)
     //    double* tmp1 = mat_mult4x4(tmp, m_STm_BT); //the right side
     //    mat_mult4x4(tmp1, m_BT_CT, m_BB_CT_curTipPos); //convert to CT in terms of BB
 
-//	double usPlaneLength = 76.6 - 3.9;
-    double usPlaneLength = 102.6 - 3.9;
+    double usPlaneLength = 76.6 - 3.9;
+//    double usPlaneLength = 102.1 - 5.2;
 
 	int nRows = m_frames[idx].image_.rows;
-	double pixSize = usPlaneLength / static_cast<double>(nRows); // assuming square pixels
+    double pixSize = usPlaneLength / static_cast<double>(nRows); // assuming square pixels
 
-//    cv::Matx44d T_EM_ST;
-//    T_EM_ST <<  0,  0, 1, 0,
-//                0, -1, 0, 0,
-//                1,  0, 0, 0,
-//                0,  0, 0, 1;
-//    std::cout << "T_Box_EM\n" << T_EM_ST << std::endl;
-
-    cv::Matx44d T_EM_ST;
-    T_EM_ST <<  0,  0,  -1, 0,
-                0,  1,  0, 0,
-                1,  0,  0, 0,
-                0,  0,  0, 1;
-
-    cv::Matx44d T_Box_EM;
-    T_Box_EM << 0,  0,  1, 0,
-                0,  -1,  0, 0,
-                1,  0,  0, 0,
-                0,  0,  0, 1;
+    //m_resetBB, m_resetBBinv, m_EM_now, m_EM_Box_meas, m_EM_Box_measInv, m_EM_Box_ideal,m_EMideal_CT, m_CT_US
 
     if(m_nFrames == 1)
     {
-        QQuaternion calib(0.0098, -0.0530, -0.9873, -0.1492);
-        QMatrix3x3 calibMat = calib.toRotationMatrix();
-
-        cv::Matx44d m_BB_SBm = cv::Matx44d(calibMat(0,0),calibMat(0,1),calibMat(0,2), 0,
-                                           calibMat(1,0),calibMat(1,1),calibMat(1,2), 0,
-                                           calibMat(2,0),calibMat(2,1),calibMat(2,2), 0,
-                                                       0,            0,            0, 1);
-        QQuaternion calibInv = calib.inverted();
-        QMatrix3x3 calibMatInv = calibInv.toRotationMatrix();
-        m_STm_BT = cv::Matx44d( calibMatInv(0,0),calibMatInv(0,1),calibMatInv(0,2), 0,
-                                calibMatInv(1,0),calibMatInv(1,1),calibMatInv(1,2), 0,
-                                calibMatInv(2,0),calibMatInv(2,1),calibMatInv(2,2), 0,
-                                               0,            0,            0,       1);
-
-
-//        cv::Matx44d m_BB_SBm = cv::Matx44d( 0.1017,  0.9499, 0.2957, 0.0000,
-//                                           -0.0352, -0.2936, 0.9553, 0.0023,
-//                                            0.9942, -0.1076, 0.0035, 0.0000,
-//                                                 0,       0,      0, 1.0000);
-
-//        m_STm_BT = cv::Matx44d( 0.1017, -0.0352,  0.9942,  0.0001,
-//                                0.9499, -0.2936, -0.1076,  0.0007,
-//                                0.2957,  0.9553,  0.0035, -0.0022,
-//                                     0,       0,       0,  1.0000);
-
         // set the first frame location as the origin
         // transform coordinates such that z aligns with catheter
-        m_origin = m_frames[idx].emData_*T_Box_EM;
+        m_resetBB = m_frames[idx].emData_;
+        m_resetBBinv = m_resetBB.inv();
 
-        //m_originInv = cv::Matx44d( m_origin.val );
+//        cv::Matx33d rot = m_origin.get_minor<3,3>(0,0);
+//        cv::Matx33d rotTr = rot.t();
+//        cv::Matx31d trans = -rotTr * m_origin.get_minor<3,1>(0,3);
 
-        cv::Matx33d rot = m_origin.get_minor<3,3>(0,0);
-        cv::Matx33d rotTr = rot.t();
-        cv::Matx31d trans = -rotTr * m_origin.get_minor<3,1>(0,3);
-
-        m_originInv = cv::Matx44d(rotTr(0),rotTr(1),rotTr(2),trans(0),
-                                  rotTr(3),rotTr(4),rotTr(5),trans(1),
-                                  rotTr(6),rotTr(7),rotTr(8),trans(2),
-                                  0,0,0,1);
-
-
-        std::cout << "\nm_origin\n" << m_origin << std::endl;
-
-        std::cout << "\nm_originInv\n" << m_originInv << std::endl;
-
-        std::cout << "\nMult\n" << m_originInv*m_origin << std::endl;
-
-        m_BB_Box = m_BB_SBm * m_originInv;
+//        m_originInv = cv::Matx44d(rotTr(0),rotTr(1),rotTr(2),trans(0),
+//                                  rotTr(3),rotTr(4),rotTr(5),trans(1),
+//                                  rotTr(6),rotTr(7),rotTr(8),trans(2),
+//                                  0,0,0,1);
     }
 
-    cv::Matx44d T_EM_CT;
-    T_EM_CT << 1, 0, 0, 0,
-               0, 1, 0, 0,
-               0, 0, 1, 14.5,
-               0, 0, 0, 1;
-
-	cv::Matx44d T_CT_IMG;
-    T_CT_IMG << 0, 1, 0, 0,
-                0, 0, -1, 0,
-               -1, 0, 0, m_frames[idx].image_.cols / 2.0 * pixSize,
-                0, 0, 0, 1;
-	std::cout << "T_CT_IMG\n" << T_CT_IMG << std::endl;
-	printf("Pixel size: %.3f\n", pixSize);
+    printf("Pixel size: %.3f\n", pixSize);
 
 	int2 obsIdxAndLength;
 	obsIdxAndLength.x = m_observations.size();
 	obsIdxAndLength.y = 0;
 
-    //cv::Matx44d premul = m_BB_Box *  m_frames[idx].emData_ * m_STm_BT * T_EM_CT * T_CT_IMG;
-    //cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_Box_EM * T_EM_CT * T_CT_IMG;
-    //cv::Matx44d premul = m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG; // T_EM_ST * T_Box_EM *T_EM_CT * T_CT_IMG
-    //cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG;
-    cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_Box_EM * T_EM_CT * T_CT_IMG;
-    // cv::Matx44d premul = m_originInv * m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG; // somewhat working
-    //cv::Matx44d premul = m_frames[idx].emData_ * T_EM_ST * T_EM_CT * T_CT_IMG;
-    //std::cout << "premul\n" << premul << std::endl;
 
-	//// debug print
-	//std::cout << "T_CT_IMG\n" << T_CT_IMG << std::endl;
-	//std::cout << "emData_\n" << m_frames[idx].emData_ << std::endl;
+    m_T_CT_IMG << 0, 1, 0, 0,
+                  0, 0, -1, 0,
+                 -1, 0, 0, m_frames[idx].image_.cols / 2.0 * pixSize,
+                  0, 0, 0, 1;
+
+
+    cv::Matx44d premul = m_resetBBinv * // origin set at beginning of frame collection
+                         m_frames[idx].emData_ * // current reading
+                         //m_EM_Box_measInv * // calibration
+                         m_EM_Box_ideal * // ideal calibration
+                         m_EMideal_CT * // sensor to crystal
+                         m_CT_US * // ultrasound plane
+                         m_T_CT_IMG; // pixel to mm
+
+    std::cout << "premul\n" << premul << std::endl;
+
+    //// debug print
+    //std::cout << "T_CT_IMG\n" << T_CT_IMG << std::endl;
+    //std::cout << "emData_\n" << m_frames[idx].emData_ << std::endl;
 
 	for (int row = 0; row < nRows; row++)
 	{
@@ -208,7 +185,7 @@ void Volume3D::transformPlane(const int idx)
 			//std::cout << (int)maskRow[col] << std::endl;
 			if ((int)maskRow[col]) // not masked
 			{
-				cv::Matx41d tmpPt(static_cast<double>(col)*pixSize, static_cast<double>(row)*pixSize, 0.0, 1.0);
+                cv::Matx41d tmpPt(static_cast<double>(col)*pixSize, static_cast<double>(row)*pixSize, 0.0, 1.0);
 				cv::Matx41d res = premul * tmpPt;
 
 				float4 tmp;
@@ -249,7 +226,7 @@ void Volume3D::transformPlane(const int idx)
 	v.push_back(idx);
 
 	updateBoundingBox(v);
-	updateGridDimensions();
+    updateGridDimensions();
 }
 
 bool Volume3D::removeFrame(unsigned int idx)
