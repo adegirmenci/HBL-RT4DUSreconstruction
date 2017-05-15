@@ -20,7 +20,6 @@ Make sure to update your CUDA compute capability in the .pro file (GENCODE).
 ## Authors
 
 * **Alperen Degirmenci** - *Lead developer* - [Harvard Biorobotics Lab](https://scholar.harvard.edu/adegirmenci/)
-* **Paul M. Loschak** - *Contributions to the controller*
 
 ## License
 
