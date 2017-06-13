@@ -42,26 +42,6 @@ Volume3D::Volume3D(QObject *parent) : QObject(parent), m_nFrames(0)
 	std::cout << std::chrono::steady_clock::period::den << std::endl;
 	std::cout << "steady = " << std::boolalpha << std::chrono::steady_clock::is_steady << std::endl << std::endl;
 
-    // calibration
-
-//    QQuaternion calib(0.0098, -0.0530, -0.9873, -0.1492);
-//    QMatrix3x3 calibMat = calib.toRotationMatrix();
-
-    //m_resetBB, m_resetBBinv, m_EM_now, m_EM_Box_meas, m_EM_Box_measInv, m_EM_Box_ideal,m_EMideal_CT, m_CT_US
-    m_EM_Box_meas = cv::Matx44d(-0.9617, 0.2197,  0.1611, 0.0,
-                                 0.2387, 0.9648,  0.1100, 0.0,
-                                -0.1313, 0.1443, -0.9803, 0.0,
-                                    0.0,    0.0,     0.0, 1.0);
-    m_EM_Box_measInv = m_EM_Box_meas.inv();
-    m_EM_Box_ideal = cv::Matx44d(-1.0, 0.0,  0.0, 0.0,
-                                  0.0, 1.0,  0.0, 0.0,
-                                  0.0, 0.0, -1.0, 0.0,
-                                  0.0, 0.0,  0.0, 1.0);
-    m_EMideal_CT = cv::Matx44d(0.0, 0.0, 1.0, 14.5,
-                               0.0, 1.0, 0.0,  0.0,
-                              -1.0, 0.0, 0.0, -2.3,
-                               0.0, 0.0, 0.0,  1.0);
-
     // update_CT_US(20.0f);
     update_CT_US(0.0f);
 
@@ -118,19 +98,11 @@ void Volume3D::transformPlane(const int idx)
     // flip image LR - no need
     //cv::flip(m_frames[idx].image_,m_frames[idx].image_,1);
 
-    // From old ICEbot GUI
-    //    create4x4Matrix(m_curTipPos, m_latest_em_pos);
-    //    double* tmp = mat_mult4x4(m_BB_Box, m_curTipPos); //the left side of the constants
-    //    double* tmp1 = mat_mult4x4(tmp, m_STm_BT); //the right side
-    //    mat_mult4x4(tmp1, m_BT_CT, m_BB_CT_curTipPos); //convert to CT in terms of BB
-
     double usPlaneLength = 76.6 - 3.9;
 //    double usPlaneLength = 102.1 - 5.2;
 
 	int nRows = m_frames[idx].image_.rows;
     double pixSize = usPlaneLength / static_cast<double>(nRows); // assuming square pixels
-
-    //m_resetBB, m_resetBBinv, m_EM_now, m_EM_Box_meas, m_EM_Box_measInv, m_EM_Box_ideal,m_EMideal_CT, m_CT_US
 
     if(m_nFrames == 1)
     {
@@ -164,9 +136,6 @@ void Volume3D::transformPlane(const int idx)
 
     cv::Matx44d premul = m_resetBBinv * // origin set at beginning of frame collection
                          m_frames[idx].emData_ * // current reading
-                         //m_EM_Box_measInv * // calibration
-                         m_EM_Box_ideal * // ideal calibration
-                         m_EMideal_CT * // sensor to crystal
                          m_CT_US * // ultrasound plane
                          m_T_CT_IMG; // pixel to mm
 

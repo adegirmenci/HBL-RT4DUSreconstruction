@@ -184,7 +184,7 @@ private:
 //    cv::Matx44d m_STm_BT;
 
 
-    cv::Matx44d m_resetBB, m_resetBBinv, m_EM_now, m_EM_Box_meas, m_EM_Box_measInv, m_EM_Box_ideal,m_EMideal_CT, m_CT_US;
+    cv::Matx44d m_resetBB, m_resetBBinv, m_CT_US;
     cv::Matx44d m_T_CT_IMG;
 
 
