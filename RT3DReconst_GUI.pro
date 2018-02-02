@@ -36,30 +36,61 @@ FORMS    += rt3dreconst_gui.ui \
 RC_FILE = RT3DUSReconstGUI.rc
 
 win32 {
-    INCLUDEPATH += "C:\\opencv\\build\\include" \
-                   "D:\\qhull-2015.2\\src"
 
-    CONFIG(debug,debug|release) {
-        LIBS += -L"C:\\opencv\\build\\x86\\vc12\\lib" \
-            -lopencv_core2411d \
-            -lopencv_highgui2411d \
-            -lopencv_imgproc2411d \
-            -lopencv_features2d2411d \
-            -lopencv_calib3d2411d
+    !contains(QMAKE_TARGET.arch, x86_64) {
+        message("x86 build")
+        INCLUDEPATH += "C:\\opencv\\build\\include" \
+                       "D:\\qhull-2015.2\\src"
+
+        CONFIG(debug,debug|release) {
+            LIBS += -L"C:\\opencv\\build\\x86\\vc12\\lib" \
+                -lopencv_core2411d \
+                -lopencv_highgui2411d \
+                -lopencv_imgproc2411d \
+                -lopencv_features2d2411d \
+                -lopencv_calib3d2411d
+        }
+
+        CONFIG(release,debug|release) {
+            LIBS += -L"C:\\opencv\\build\\x86\\vc12\\lib" \
+                -lopencv_core2411 \
+                -lopencv_highgui2411 \
+                -lopencv_imgproc2411 \
+                -lopencv_features2d2411 \
+                -lopencv_calib3d2411
+        }
+
+        LIBS += -L"D:\\qhull-2015.2\\lib" \
+                -lqhullstatic_r \
+                -lqhullcpp
+    } else {
+        message("x86_64 build")
+
+        INCLUDEPATH += "C:\\opencv\\build\\include" \
+                       "D:\\qhull-2015.2_64bit\\src"
+
+        CONFIG(debug,debug|release) {
+            LIBS += -L"C:\\opencv\\build\\x64\\vc12\\lib" \
+                -lopencv_core2411d \
+                -lopencv_highgui2411d \
+                -lopencv_imgproc2411d \
+                -lopencv_features2d2411d \
+                -lopencv_calib3d2411d
+        }
+
+        CONFIG(release,debug|release) {
+            LIBS += -L"C:\\opencv\\build\\x64\\vc12\\lib" \
+                -lopencv_core2411 \
+                -lopencv_highgui2411 \
+                -lopencv_imgproc2411 \
+                -lopencv_features2d2411 \
+                -lopencv_calib3d2411
+        }
+
+            LIBS += -L"D:\\qhull-2015.2_64bit\\lib" \
+                    -lqhullstatic_r \
+                    -lqhullcpp
     }
-
-    CONFIG(release,debug|release) {
-        LIBS += -L"C:\\opencv\\build\\x86\\vc12\\lib" \
-            -lopencv_core2411 \
-            -lopencv_highgui2411 \
-            -lopencv_imgproc2411 \
-            -lopencv_features2d2411 \
-            -lopencv_calib3d2411
-    }
-
-    LIBS += -L"D:\\qhull-2015.2\\lib" \
-            -lqhullstatic_r \
-            -lqhullcpp
 }
 
 # Define output directories
@@ -89,7 +120,7 @@ SOURCES+=RT3DUSkernels.cu
 SOURCES-=RT3DUSkernels.cu
 
 # Path to cuda SDK install
-win32:CUDA_DIR = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v7.0"
+win32:CUDA_DIR = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v8.0"
 # Path to cuda toolkit install
 #win32:CUDA_SDK = "C:\\ProgramData\\NVIDIA Corporation\CUDA Samples\\v7.0"
 
@@ -101,7 +132,15 @@ INCLUDEPATH += $$CUDA_DIR/include
 win32:INCLUDEPATH += $$CUDA_SDK\common\inc
 
 #cuda libs
-win32:QMAKE_LIBDIR += $$CUDA_DIR\lib\Win32
+win32{
+    !contains(QMAKE_TARGET.arch, x86_64) {
+        message("CUDA 32bit")
+        QMAKE_LIBDIR += $$CUDA_DIR\lib\Win32
+    }else{
+        message("CUDA 64bit")
+        QMAKE_LIBDIR += $$CUDA_DIR\lib\x64
+    }
+}
 #win32:QMAKE_LIBDIR += $$CUDA_SDK\common\lib\Win32
 LIBS += -lcudart -lcudadevrt
 
@@ -132,7 +171,15 @@ cudaIntr.output = ${OBJECTS_DIR}${QMAKE_FILE_BASE}.o
 win32:cudaIntr.output = $$OBJECTS_DIR/${QMAKE_FILE_BASE}.obj
 
 ## Tweak arch according to your hw's compute capability
-cudaIntr.commands = $$CUDA_DIR/bin/nvcc -m32 -g -gencode $$GENCODE -dc $$NVCCFLAGS $$CUDA_INC $$LIBS ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
+win32{
+    !contains(QMAKE_TARGET.arch, x86_64) {
+        message("CUDA 32bit")
+        cudaIntr.commands = $$CUDA_DIR/bin/nvcc -m32 -g -gencode $$GENCODE -dc $$NVCCFLAGS $$CUDA_INC $$LIBS ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
+    }else{
+        message("CUDA 64bit")
+        cudaIntr.commands = $$CUDA_DIR/bin/nvcc -m64 -g -gencode $$GENCODE -dc $$NVCCFLAGS $$CUDA_INC $$LIBS ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
+    }
+}
 
 #Set our variable out. These obj files need to be used to create the link obj file
 #and used in our final gcc compilation
@@ -149,7 +196,15 @@ cuda.output = ${QMAKE_FILE_BASE}_link.o
 win32:cuda.output = ${QMAKE_FILE_BASE}_link.obj
 
 # Tweak arch according to your hw's compute capability
-cuda.commands = $$CUDA_DIR/bin/nvcc -m32 -g -gencode $$GENCODE  -dlink    ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
+win32{
+    !contains(QMAKE_TARGET.arch, x86_64) {
+        message("CUDA 32bit")
+        cuda.commands = $$CUDA_DIR/bin/nvcc -m32 -g -gencode $$GENCODE  -dlink    ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
+    }else{
+        message("CUDA 64bit")
+        cuda.commands = $$CUDA_DIR/bin/nvcc -m64 -g -gencode $$GENCODE  -dlink    ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT}
+    }
+}
 cuda.dependency_type = TYPE_C
 cuda.depend_command = $$CUDA_DIR/bin/nvcc -g -M $$CUDA_INC $$NVCCFLAGS   ${QMAKE_FILE_NAME}
 # Tell Qt that we want add more stuff to the Makefile
