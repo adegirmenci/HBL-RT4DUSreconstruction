@@ -45,6 +45,8 @@ public slots:
     void tellVolumeToSave();
     void passthroughVolumeSaved(QString vol);
 
+    void loadSavedFrames(const QString path, const quint8 nFrames);
+
 private:
     // Instead of using "m_mutex.lock()"
     // use "QMutexLocker locker(&m_mutex);"

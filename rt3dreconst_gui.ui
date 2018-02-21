@@ -41,7 +41,7 @@
     <property name="geometry">
      <rect>
       <x>490</x>
-      <y>40</y>
+      <y>70</y>
       <width>80</width>
       <height>21</height>
      </rect>
@@ -72,6 +72,19 @@
       </rect>
      </property>
     </widget>
+   </widget>
+   <widget class="QPushButton" name="loadDataButton">
+    <property name="geometry">
+     <rect>
+      <x>490</x>
+      <y>30</y>
+      <width>80</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Load Data</string>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">

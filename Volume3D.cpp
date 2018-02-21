@@ -139,7 +139,16 @@ void Volume3D::transformPlane(const int idx)
                          m_CT_US * // ultrasound plane
                          m_T_CT_IMG; // pixel to mm
 
-    std::cout << "premul\n" << premul << std::endl;
+//    std::cout << "premul\n" << std::endl;
+//    for(size_t i = 0; i < 4; i++)
+//    {
+//        std::cout << premul(i,0) << " "
+//                  << premul(i,1) << " "
+//                  << premul(i,2) << " "
+//                  << premul(i,3) << " "
+//                  << std::endl;
+//    }
+
 
     //// debug print
     //std::cout << "T_CT_IMG\n" << T_CT_IMG << std::endl;
@@ -473,6 +482,7 @@ bool Volume3D::computeConvHull()
 	}
 
 	// get non-negative elements and put into Qhull
+    // TODO: limit iteration to bounding box only
 	printf("\nRun QHull.\n");
 	m_convHullVerts.clear();
 	size_t linIdx = 0;
@@ -517,6 +527,7 @@ bool Volume3D::fillConvHull()
 
 	//QhullPoint center = qhull.origin();
 
+    // TODO: limit iteration to bounding box only
 	printf("Compute inhull.\n");
 	QhullPoint currPoint = qhull.origin(); // using origin as a dummy point to initialize
 	//std::vector<int> isInside(qhull.facetCount(), 0);

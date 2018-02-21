@@ -21,6 +21,8 @@ private slots:
 
     void on_interpButton_clicked();
 
+    void on_loadDataButton_clicked();
+
 private:
     Ui::RT3DReconst_GUI *ui;
 

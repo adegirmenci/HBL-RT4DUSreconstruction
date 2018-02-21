@@ -79,3 +79,8 @@ void RT3DReconst_GUI::on_interpButton_clicked()
 {
     m_worker->interpolate();
 }
+
+void RT3DReconst_GUI::on_loadDataButton_clicked()
+{
+    m_worker->loadSavedFrames(QString("D:\\Dropbox\\Harvard\\ICEbot share\\Our Papers\\2017 R&A Mag\\Paper\\figs\\fig7\\untitled folder\\"),40);
+}

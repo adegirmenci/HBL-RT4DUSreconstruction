@@ -62,15 +62,24 @@ void RT3DReconstWorker::addFrame(FrameExtd frm)
     newFrame.emData_ = cv::Matx44f(tform.data());
     cv::transpose(newFrame.emData_,newFrame.emData_);
 
-    for(size_t i = 0; i < 4; i++)
-    {
-        std::cout << tform.row(i).x() << " "
-                  << tform.row(i).y() << " "
-                  << tform.row(i).z() << " "
-                  << tform.row(i).w()
-                  << std::endl;
-    }
-    std::cout << newFrame.emData_ << std::endl;
+//    std::cout << "tform:" << std::endl;
+//    for(size_t i = 0; i < 4; i++)
+//    {
+//        std::cout << tform.row(i).x() << " "
+//                  << tform.row(i).y() << " "
+//                  << tform.row(i).z() << " "
+//                  << tform.row(i).w()
+//                  << std::endl;
+//    }
+//    std::cout << "newFrame.emData_:" << std::endl;
+//    for(size_t i = 0; i < 4; i++)
+//    {
+//        std::cout << newFrame.emData_(i,0) << " "
+//                  << newFrame.emData_(i,1) << " "
+//                  << newFrame.emData_(i,2) << " "
+//                  << newFrame.emData_(i,3) << " "
+//                  << std::endl;
+//    }
 
     newFrame.index_ = frm.index_;
     newFrame.phaseHR_ = frm.phaseHR_;
@@ -158,6 +167,53 @@ void RT3DReconstWorker::tellVolumeToSave()
 void RT3DReconstWorker::passthroughVolumeSaved(QString vol)
 {
     emit volumeSaved(vol);
+}
+
+void RT3DReconstWorker::loadSavedFrames(const QString path, const quint8 nFrames)
+{
+    for(quint8 i = 0; i < nFrames; i++)
+    {
+        FrameExtd frame;
+        QString txtPath = path + QString::number(i+6) + QString(".txt");
+        QString imgPath = path + QString::number(i+6);// + QString(".jp2");
+
+        frame.image_ = imgPath;
+        frame.mask_ = tr("C:\\Users\\Alperen\\Documents\\QT Projects\\RT3DReconst_GUI\\Sequoia_StarTech_Size 1 (largest)80mm partial.bin");
+        frame.index_ = i;
+        frame.timestamp_ = 0;
+
+        QFile file(txtPath);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        {
+            qDebug() << "File doesn't exist:" << txtPath << " !!!";
+            return;
+        }
+
+        std::vector<float> contents(8, 0.0f);
+
+        QTextStream in(&file);
+        for(size_t j = 0; j < 8; j++)
+        {
+            if(!in.atEnd())
+            {
+                in >> contents[j];
+                //qDebug() << contents[j];
+            }
+            else
+            {
+                qDebug() << "File ended prematurely at element (" << j << "):" << txtPath << " !!!";
+                return;
+            }
+        }
+
+
+
+        frame.EMv_ = QVector3D(contents[0], contents[1], contents[2]);
+        frame.EMq_ = QQuaternion(contents[3], contents[4], contents[5], contents[6]);
+        frame.phaseHR_ = contents[7];
+
+        addFrame(frame);
+    }
 }
 
 void RT3DReconstWorker::setEpoch(const QDateTime &datetime)
